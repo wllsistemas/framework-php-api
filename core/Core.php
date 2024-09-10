@@ -31,6 +31,14 @@ class Core
 
                 [$controller, $action] = explode('@', $route['action']);
 
+                if (!file_exists("./controller/$controller.php")):
+                    Response::json([
+                        'status' => 'error',
+                        'message' => "arquivo [$controller.php] não existe."
+                    ], 500);
+                    return;
+                endif;
+
                 require_once "./controller/$controller.php";
 
                 if (!class_exists($controller)) :
