@@ -15,7 +15,7 @@ class Core
         $url !== '/' && $url = rtrim($url, '/');
 
         foreach ($routes as $route) :
-            $regex = '#^' . preg_replace('/{id}/', '([\w-]+)', $route['path']) . '$#';
+            $regex = '#^' . preg_replace('/{(\w+)}/', '([\w\-.]+)', $route['path']) . '$#';
 
             if (preg_match($regex, $url, $matches)) :
                 $route_existe = true;
@@ -34,7 +34,7 @@ class Core
                 if (!file_exists("./controller/$controller.php")):
                     Response::json([
                         'status' => 'error',
-                        'message' => "arquivo [$controller.php] não existe."
+                        'message' => "Arquivo [$controller.php] não existe."
                     ], 500);
                     return;
                 endif;
@@ -44,7 +44,7 @@ class Core
                 if (!class_exists($controller)) :
                     Response::json([
                         'status' => 'error',
-                        'message' => "class [$controller] não existe."
+                        'message' => "Class [$controller] não existe."
                     ], 500);
                     return;
                 endif;
@@ -54,7 +54,7 @@ class Core
                 if (!method_exists($controller, $action)) {
                     Response::json([
                         'status' => 'error',
-                        'message' => "action [$action] não existe."
+                        'message' => "Action [$action] não existe na class [$controller]."
                     ], 500);
                     return;
                 }
@@ -66,7 +66,7 @@ class Core
         if (!$route_existe) :
             Response::json([
                 'status' => 'error',
-                'message' => 'rota não existe.'
+                'message' => "Rota '$url' não existe."
             ], 404);
             return;
         endif;
