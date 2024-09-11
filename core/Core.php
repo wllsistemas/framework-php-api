@@ -15,7 +15,7 @@ class Core
         $url !== '/' && $url = rtrim($url, '/');
 
         foreach ($routes as $route) :
-            $regex = '#^' . preg_replace('/{(\w+)}/', '([\w-\.]+)', $route['path']) . '$#';
+            $regex = '#^' . preg_replace('/{id}/', '([\w-]+)', $route['path']) . '$#';
 
             if (preg_match($regex, $url, $matches)) :
                 $route_existe = true;
@@ -24,7 +24,7 @@ class Core
                 if ($route['method'] !== Request::method()) :
                     Response::json([
                         'status' => 'error',
-                        'message' => 'method não aceito.'
+                        'message' => $route['method'] . ' method não aceito.'
                     ], 405);
                     return;
                 endif;
