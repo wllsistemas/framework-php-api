@@ -7,6 +7,11 @@ class Request
         return $_SERVER['REQUEST_METHOD'];
     }
 
+    public static function headers()
+    {
+        return getallheaders();
+    }
+
     public static function header($chave)
     {
         $headers = getallheaders();
@@ -26,6 +31,9 @@ class Request
                 $data = $_POST;
                 break;
             case 'PUT':
+                parse_str(file_get_contents('php://input') ?? '', $data);
+                break;
+            case 'PATCH':
                 parse_str(file_get_contents('php://input') ?? '', $data);
                 break;
         }

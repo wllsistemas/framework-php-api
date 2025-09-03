@@ -31,6 +31,15 @@ class Http
         ];
     }
 
+    public static function patch(string $path, string $action)
+    {
+        self::$routes[] = [
+            'path' => $path,
+            'action' => $action,
+            'method' => 'PATCH'
+        ];
+    }
+
     public static function delete(string $path, string $action)
     {
         self::$routes[] = [
