@@ -4,7 +4,7 @@ class Authentication
 {
     public static function bearer(Request $request): bool
     {
-        return true;
+        return false;
     }
 
     public static function basic(Request $request): bool
