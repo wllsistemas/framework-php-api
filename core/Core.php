@@ -8,36 +8,28 @@ class Core
     public static function dispatch(array $routes)
     {
         $url = self::getUrl();
-        $msgErro = '';
-        $msgAuth = '';
-        $routeExiste = false;
 
         foreach ($routes as $route) :
+            $msgErro = [];
 
-            if (!self::checkRoute($route, $url, $matches))
+            if (!self::checkRoute($route, $url, $matches, $msgErro))
                 continue;
 
-            $routeExiste = true;
-
-            if (!self::checkMethod($route)) {
-                $msgErro = 'Method ' . Request::method() . ' não aceito ou parâmetros inválidos.';
-                continue;
-            }
-
-            if (isset($route['auth']) && !empty($route['auth'])) {
-                if (!self::checkAuth($route['auth'], $msgAuth)) {
-                    break;
-                }
-            }
-
-            if (!self::executeAction($route['action'], $matches, $msgErro))
+            if (!self::checkMethod($route, $msgErro))
                 continue;
 
-            $msgErro = '';
+            if (!self::checkAuth($route, $msgErro))
+                break;
+
+            self::executeAction($route, $matches, $msgErro);
             break;
         endforeach;
 
-        self::handleErrors($routeExiste, $url, $msgErro, $msgAuth);
+        if (count($msgErro) > 0) {
+            Response::json([
+                'message' => $msgErro['message']
+            ], $msgErro['code']);
+        }
     }
 
     private static function getUrl(): string
@@ -49,108 +41,120 @@ class Core
         return $url;
     }
 
-    private static function checkRoute(array $route, string $url, ?array &$matches): bool
+    private static function checkRoute(array $route, string $url, ?array &$matches, array &$msgErro): bool
     {
         $regex = '#^' . preg_replace('/{(\w+)}/', '([\w\-.@]+)', $route['path']) . '$#';
         if (preg_match($regex, $url, $matches)) {
             array_shift($matches);
             return true;
         }
+
+        $msgErro = [
+            'message' => "Rota '$url' não existe.",
+            'code' => 404
+        ];
         return false;
     }
 
-    private static function checkMethod(array $route): bool
+    private static function checkMethod(array $route, array &$msgErro): bool
     {
-        return $route['method'] === Request::method();
+        if ($route['method'] !== Request::method()) {
+            $msgErro = [
+                'message' => 'Method ' . Request::method() . ' não aceito.',
+                'code' => 405
+            ];
+            return false;
+        }
+        return true;
     }
 
-    private static function checkAuth(string $auth, string &$msgAuth): bool
+    private static function checkAuth(array $route, array &$msgErro): bool
     {
-        [$controllerAuth, $actionAuth] = explode('@', $auth);
+        if (empty($route['auth']))
+            return true;
+
+        [$controllerAuth, $actionAuth] = explode('@', $route['auth']);
 
         if (!is_dir("./auth")) {
-            $msgAuth = "Pasta 'auth' não existe.";
+            $msgErro = [
+                'message' => "Pasta 'auth' não existe.",
+                'code' => 404
+            ];
             return false;
         }
 
         if (!file_exists("./auth/$controllerAuth.php")) {
-            $msgAuth = "Arquivo [$controllerAuth.php] não existe na pasta 'auth'.";
+            $msgErro = [
+                'message' => "Arquivo [$controllerAuth.php] não existe na pasta 'auth'.",
+                'code' => 404
+            ];
             return false;
         }
 
         require_once "./auth/$controllerAuth.php";
 
         if (!class_exists($controllerAuth)) {
-            $msgAuth = "Class [$controllerAuth] não existe.";
+            $msgErro = [
+                'message' => "Class [$controllerAuth] não existe.",
+                'code' => 404
+            ];
             return false;
         }
 
         $authentication = new $controllerAuth();
 
         if (!method_exists($authentication, $actionAuth)) {
-            $msgAuth = "Action [$actionAuth] não existe na class [$controllerAuth].";
+            $msgErro = [
+                'message' => "Action [$actionAuth] não existe na class [$controllerAuth].",
+                'code' => 404
+            ];
             return false;
         }
 
         if (!$authentication->$actionAuth(new Request)) {
-            $msgAuth = "Não autorizado.";
+            $msgErro = [
+                'message' => "Não autorizado.",
+                'code' => 401
+            ];
             return false;
         }
 
         return true;
     }
 
-    private static function executeAction(string $action, array $matches, string &$msgErro): bool
+    private static function executeAction(array $route, array $matches, array &$msgErro): bool
     {
-        [$controller, $method] = explode('@', $action);
+        [$controller, $method] = explode('@', $route['action']);
 
         if (!file_exists("./controller/$controller.php")) {
-            $msgErro = "Arquivo [$controller.php] não existe.";
+            $msgErro = [
+                'message' => "Arquivo [$controller.php] não existe.",
+                'code' => 404
+            ];
             return false;
         }
 
         require_once "./controller/$controller.php";
 
         if (!class_exists($controller)) {
-            $msgErro = "Class [$controller] não existe.";
+            $msgErro = [
+                'message' => "Class [$controller] não existe.",
+                'code' => 404
+            ];
             return false;
         }
 
         $instance = new $controller();
 
         if (!method_exists($instance, $method)) {
-            $msgErro = "Action [$method] não existe na class [$controller].";
+            $msgErro = [
+                'message' => "Action [$method] não existe na class [$controller].",
+                'code' => 404
+            ];
             return false;
         }
 
         $instance->$method(new Request, new Response, $matches);
         return true;
-    }
-
-    private static function handleErrors(bool $routeExiste, string $url, string $msgErro, string $msgAuth): void
-    {
-        if (!empty($msgErro)) {
-            Response::json([
-                'status' => 'error',
-                'message' => $msgErro
-            ], 405);
-            return;
-        }
-
-        if (!$routeExiste) {
-            Response::json([
-                'status' => 'error',
-                'message' => "Rota '$url' não existe."
-            ], 404);
-            return;
-        }
-
-        if (!empty($msgAuth)) {
-            Response::json([
-                'status' => 'error',
-                'message' => $msgAuth
-            ], 401);
-            return;
-        }
     }
 }

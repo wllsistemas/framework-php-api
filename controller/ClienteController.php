@@ -22,4 +22,11 @@ class ClienteController
             'message' => 'Cliente cadastrado',
         ], 201);
     }
+
+    public function update(Request $request, Response $response)
+    {
+        return $response->json([
+            'message' => 'Cliente atualizado',
+        ], 202);
+    }
 }
