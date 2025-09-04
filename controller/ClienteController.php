@@ -29,4 +29,11 @@ class ClienteController
             'message' => 'Cliente atualizado',
         ], 202);
     }
+
+    public function delete(Request $request, Response $response)
+    {
+        return $response->json([
+            'message' => 'Cliente deletado',
+        ], 202);
+    }
 }
