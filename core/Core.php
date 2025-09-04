@@ -13,9 +13,9 @@ class Core
         $routeExiste = false;
 
         foreach ($routes as $route) :
-            if (!self::matchRoute($route, $url, $matches)) {
+
+            if (!self::checkRoute($route, $url, $matches))
                 continue;
-            }
 
             $routeExiste = true;
 
@@ -26,13 +26,12 @@ class Core
 
             if (isset($route['auth']) && !empty($route['auth'])) {
                 if (!self::checkAuth($route['auth'], $msgAuth)) {
-                    continue;
+                    break;
                 }
             }
 
-            if (!self::executeAction($route['action'], $matches, $msgErro)) {
+            if (!self::executeAction($route['action'], $matches, $msgErro))
                 continue;
-            }
 
             $msgErro = '';
             break;
@@ -50,7 +49,7 @@ class Core
         return $url;
     }
 
-    private static function matchRoute(array $route, string $url, ?array &$matches): bool
+    private static function checkRoute(array $route, string $url, ?array &$matches): bool
     {
         $regex = '#^' . preg_replace('/{(\w+)}/', '([\w\-.@]+)', $route['path']) . '$#';
         if (preg_match($regex, $url, $matches)) {
@@ -94,7 +93,7 @@ class Core
         }
 
         if (!$authentication->$actionAuth(new Request)) {
-            $msgAuth = "Acesso não autorizado [$actionAuth].";
+            $msgAuth = "Não autorizado.";
             return false;
         }
 
